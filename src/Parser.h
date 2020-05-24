@@ -49,6 +49,36 @@ namespace Bonfire {
 
 		ExpressionST* parse_expression(std::vector<Token>& tokens, uint64_t& cursor, Type return_type);
 
+		Operation parse_operation(std::vector<Token>& tokens, uint64_t& cursor) {
+			++cursor;
+			// If the token at the cursor is an operation, it is only one token: We use a switch
+			switch (tokens[cursor - 1].type) {
+			case TokenType::AND:
+				return Operation::AND;
+			case TokenType::ANDL:
+				return Operation::ANDL;
+			case TokenType::OR:
+				return Operation::OR;
+			case TokenType::ORL:
+				return Operation::ORL;
+			case TokenType::PLUS:
+				return Operation::ADD;
+			case TokenType::MINUS:
+				return Operation::SUB;
+			case TokenType::MUL:
+				return Operation::MUL;
+			case TokenType::SLASH:
+				return Operation::DIV;
+			case TokenType::MODULO:
+				return Operation::MOD;
+			case TokenType::POW:
+				return Operation::POW;
+			default:
+				--cursor;
+				return Operation::NONE;
+			}
+		}
+
 		ConstantST* parse_constant(std::vector<Token>& tokens, uint64_t& cursor, Type expected_type) {
 			if (cursor + 1 >= tokens.size()) throw parse_exception();
 			if (tokens[cursor].type == TokenType::CONSTANT) {
@@ -86,12 +116,39 @@ namespace Bonfire {
 			throw parse_exception();
 		}
 
+		IfST* parse_if(std::vector<Token>& tokens, uint64_t& cursor, Type expected_type) {
+			if (cursor + 3 >= tokens.size()) throw parse_exception();
+			if (tokens[cursor].type == TokenType::IF) {
+				++cursor;
+				if (tokens[cursor].type == TokenType::PAR_OPEN) {
+					++cursor;
+					ExpressionST* condition = parse_expression(tokens, cursor, Type::BOOLEAN);
+					if (tokens[cursor].type == TokenType::PAR_CLOSE) {
+						++cursor;
+						ExpressionST* then_body = parse_expression(tokens, cursor, expected_type);
+
+						IfST* if_st = new IfST(condition, then_body, expected_type);
+						// Check if there is an else body after :
+						if (tokens[cursor].type == TokenType::COLON) {
+							// There is an else body
+							++cursor;
+							ExpressionST* else_body = parse_expression(tokens, cursor, expected_type);
+							if_st->has_else = true;
+							if_st->else_body = else_body;
+						}
+						return if_st;
+					}
+				}
+			}
+			throw parse_exception();
+		}
+
 		VariableDeclarationST* parse_variable_declaration(std::vector<Token>& tokens, uint64_t& cursor) {
 			if (cursor + 4 >= tokens.size()) throw parse_exception();
 			if (tokens[cursor].type == TokenType::IDENTIFIER) {
 				std::string var_name = tokens[cursor].value;
 				++cursor;
-				if (tokens[cursor].type == TokenType::TYPE_DEF) {
+				if (tokens[cursor].type == TokenType::COLON) {
 					++cursor;
 					if (tokens[cursor].type == TokenType::IDENTIFIER) {
 						Type var_type = parse_type(tokens[cursor].value);
@@ -117,40 +174,51 @@ namespace Bonfire {
 		// Parses exactly one ST
 		ExpressionST* parse_expression(std::vector<Token>& tokens, uint64_t& cursor, Type return_type) {
 			uint64_t start_cursor = cursor; // We have to reset the cursor everytime the parser fails to parse
+			ExpressionST* expression;
 			try {
-				return parse_return(tokens, cursor, return_type);
+				expression = parse_return(tokens, cursor, return_type);
 			}
 			catch (parse_exception) {
 				cursor = start_cursor;
 				try {
-					return parse_code_block(tokens, cursor, return_type);
+					expression = parse_code_block(tokens, cursor, return_type);
 				}
 				catch (parse_exception) {
 					cursor = start_cursor;
 					try {
-						return parse_variable_declaration(tokens, cursor);
+						expression = parse_variable_declaration(tokens, cursor);
 					}
 					catch (parse_exception) {
 						cursor = start_cursor;
 						try {
-							return parse_variable_value(tokens, cursor, return_type);
+							expression = parse_variable_value(tokens, cursor, return_type);
 						}
 						catch (parse_exception) {
 							cursor = start_cursor;
 							try {
-								return parse_constant(tokens, cursor, return_type);
+								expression = parse_constant(tokens, cursor, return_type);
 							}
 							catch (parse_exception) {
 								if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
 									++cursor;
 									throw block_done_exception();
 								}
+								throw unexpected_token(cursor);
 							}
 						}
 					}
 				}
 			}
-			throw unexpected_token(cursor);
+			// Check for operations
+			Operation op = parse_operation(tokens, cursor);
+			if (op != Operation::NONE) {
+				// There is an operation. expression is lhs
+				ExpressionST* expression_rhs = parse_expression(tokens, cursor, return_type);
+				OperationST* operation = new OperationST(op, expression, expression_rhs);
+				return operation;
+			}
+			// There is no operation, return expression
+			return expression;
 		}
 
 		BlockST* parse_code_block(std::vector<Token>& tokens, uint64_t& cursor, Type return_type) {

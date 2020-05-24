@@ -17,6 +17,50 @@ namespace Bonfire {
 		DOUBLE
 	};
 
+	// Gets the type size in bytes
+	uint32_t get_type_size(Type type) {
+		switch (type) {
+		case Type::VOID:	return 0;
+			// One byte types (byte, char)
+		case Type::BOOLEAN:
+		case Type::INT8:
+		case Type::UINT8:	return 1;
+			// Two byte types (short)
+		case Type::INT16:
+		case Type::UINT16:	return 2;
+			// Four byte types (int, float)
+		case Type::INT32:
+		case Type::UINT32:
+		case Type::FLOAT:	return 4;
+			// Eight byte types (long, double)
+		case Type::INT64:
+		case Type::UINT64:
+		case Type::DOUBLE:	return 8;
+		}
+	}
+
+	bool is_integer_type(Type type) {
+		return type == Type::BOOLEAN || type == Type::UINT8 || type == Type::UINT16 || type == Type::UINT32
+			|| type == Type::UINT64 || type == Type::INT8 || type == Type::INT16 || type == Type::INT32 || type == Type::INT64;
+	}
+
+	bool is_unsigned_integer_type(Type type) {
+		return type == Type::UINT8 || type == Type::UINT16 || type == Type::UINT32 || type == Type::UINT64;
+	}
+
+	Type get_type_for_op(Type lhs, Type rhs) {
+		bool can_be_unsigned = is_unsigned_integer_type(lhs) && is_unsigned_integer_type(rhs);
+		Type biggest;
+		if (can_be_unsigned && (lhs == Type::UINT64 || rhs == Type::UINT64)) return Type::UINT64;
+		if (!can_be_unsigned && (lhs == Type::UINT64 || rhs == Type::UINT64 || lhs == Type::INT64 || rhs == Type::INT64)) return Type::INT64;
+		if (can_be_unsigned && (lhs == Type::UINT32 || rhs == Type::UINT32)) return Type::UINT32;
+		if (!can_be_unsigned && (lhs == Type::UINT32 || rhs == Type::UINT32 || lhs == Type::INT32 || rhs == Type::INT32)) return Type::INT32;
+		if (can_be_unsigned && (lhs == Type::UINT16 || rhs == Type::UINT16)) return Type::UINT16;
+		if (!can_be_unsigned && (lhs == Type::UINT16 || rhs == Type::UINT16 || lhs == Type::INT16 || rhs == Type::INT16)) return Type::INT32;
+		if (can_be_unsigned && (lhs == Type::UINT8 || rhs == Type::UINT8)) return Type::UINT8;
+		if (!can_be_unsigned && (lhs == Type::UINT8 || rhs == Type::UINT8 || lhs == Type::INT8 || rhs == Type::INT8)) return Type::INT8;
+	}
+
 	enum class ExpressionType {
 		VAR_DECLARE,
 		VAR_ASSIGN,
@@ -55,7 +99,27 @@ namespace Bonfire {
 		VAR_ASSIGNMENT,
 		VAR_DECLARATION,
 		VAR_DECL_INIT,
-		VAR_VALUE
+		VAR_VALUE,
+		ARITHMETIC_OP
+	};
+
+	enum class Operation {
+		NONE,
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
+		POW,
+		EQ,
+		LT,
+		LTE,
+		GT,
+		GTE,
+		ANDL,
+		AND,
+		ORL,
+		OR
 	};
 
 	struct AbstractSyntaxTree {
@@ -99,17 +163,20 @@ namespace Bonfire {
 
 	struct IfST : public ExpressionST {
 		bool has_else = false;
+		ExpressionST* condition;
 		ExpressionST* then_body;
 		ExpressionST* else_body;
 
-		IfST(ExpressionST* then_body, Type return_type) {
+		IfST(ExpressionST* condition, ExpressionST* then_body, Type return_type) {
+			this->condition = condition;
 			this->return_type = return_type;
 			type = AstType::IF;
 			has_else = false;
 			this->then_body = then_body;
 		}
 
-		IfST(ExpressionST* then_body, ExpressionST* else_body, Type return_type) {
+		IfST(ExpressionST* condition, ExpressionST* then_body, ExpressionST* else_body, Type return_type) {
+			this->condition = condition;
 			this->return_type = return_type;
 			type = AstType::IF;
 			has_else = true;
@@ -164,9 +231,30 @@ namespace Bonfire {
 		}
 	};
 
+	struct OperationST : public ExpressionST {
+		ExpressionST* lhs;
+		ExpressionST* rhs;
+		Operation op;
+
+		OperationST() {}
+		
+		OperationST(Operation op, ExpressionST* lhs, ExpressionST* rhs) {
+			this->op = op;
+			this->lhs = lhs;
+			this->rhs = rhs;
+			type = AstType::ARITHMETIC_OP;
+			switch (lhs->return_type) {
+			case Type::INT8: case Type::INT16: case Type::INT32:
+			case Type::UINT8: case Type::UINT16: case Type::UINT32:
+				
+				return_type = Type::INT32;
+			}
+		}
+	};
+
 	struct FunctionDefST : public AbstractSyntaxTree {
 		std::string name = "";
-		BlockST* statement;
+		BlockST* statement = NULL;
 
 		FunctionDefST() {}
 

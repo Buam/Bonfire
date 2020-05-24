@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 		std::string assembly = Assembler::assemble(program);
 		//std::cout << assembly << std::endl;
 
-		// Output .asm file
+		// Output .s file
 		std::string asm_file_name = argv[argc - 1];
 		FileUtils::change_extension(asm_file_name, ".s");
 		FileUtils::write_file(asm_file_name.c_str(), assembly);

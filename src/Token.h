@@ -2,7 +2,7 @@
 namespace Bonfire {
 	enum struct TokenType {
 		FAIL,
-		IDENTIFIER,		// Identifiers like function or variable names
+		IDENTIFIER,		// Function names, variable names and constants
 		PAR_OPEN,		// (
 		PAR_CLOSE,		// )
 		BRACE_OPEN,		// {
@@ -10,8 +10,22 @@ namespace Bonfire {
 		RETURN,			// <-
 		RETURN_TYPE,	// ->
 		CONSTANT,		// Hard-Coded Constants like 2 or '\n'
-		TYPE_DEF,		// : (type) only :
-		EQUALS			// =
+		COLON,			// : (type) or else
+		EQUALS,			// =
+		EQUALS2,		// ==
+		IF,				// ?
+		// Arithmetic operations
+		PLUS,			// +
+		MINUS,			// -
+		MUL,			// *
+		SLASH,			// /
+		MODULO,			// %
+		POW,			// ^
+		// Boolean operations
+		OR,				// |
+		ORL,			// || (lazy or)
+		AND,			// &
+		ANDL			// && (lazy and)
 	};
 
 	struct Token

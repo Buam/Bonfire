@@ -16,8 +16,8 @@ Future examples, to showcase the syntax (not the currently available features):
 
 **Fibonacci Sequence:**
 ```rust
-// Use library "std"
-(std)
+// Use library "console"
+(console)
 
 // Finds the biggest number smaller than max in the fibonacci sequence
 fib(a: i32, b: i32, max: i32) {
@@ -40,7 +40,7 @@ fib(a: i32, b: i32, max: i32) {
 
 main() -> i32 {
   // Use function "println" from library "std" to print one line on the screen
-  std::println(fib(0, 1, 1000))
+  console::println(fib(0, 1, 1000))
   <- 0
 }
 ```

@@ -44,3 +44,4 @@ main() -> i32 {
   <- 0
 }
 ```
+Licensed under the [MIT License](https://github.com/Buam/Bonfire/blob/master/LICENSE.txt)

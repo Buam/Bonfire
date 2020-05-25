@@ -243,11 +243,23 @@ namespace Bonfire {
 			this->lhs = lhs;
 			this->rhs = rhs;
 			type = AstType::ARITHMETIC_OP;
-			switch (lhs->return_type) {
-			case Type::INT8: case Type::INT16: case Type::INT32:
-			case Type::UINT8: case Type::UINT16: case Type::UINT32:
-				
-				return_type = Type::INT32;
+			switch (op) {
+			case Operation::EQ:
+			case Operation::LT:
+			case Operation::LTE:
+			case Operation::GT:
+			case Operation::GTE:
+				return_type = Type::BOOLEAN;
+				break;
+			case Operation::ADD:
+			case Operation::SUB:
+			case Operation::MUL:
+			case Operation::DIV:
+			case Operation::MOD:
+			case Operation::POW:
+				// Get the type that is big enough so it can fit the result
+				return_type = get_type_for_op(lhs->return_type, rhs->return_type);
+				break;
 			}
 		}
 	};

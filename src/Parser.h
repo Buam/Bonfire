@@ -73,6 +73,8 @@ namespace Bonfire {
 				return Operation::MOD;
 			case TokenType::POW:
 				return Operation::POW;
+			case TokenType::EQUALS2:
+				return Operation::EQ;
 			default:
 				--cursor;
 				return Operation::NONE;
@@ -186,24 +188,30 @@ namespace Bonfire {
 				catch (parse_exception) {
 					cursor = start_cursor;
 					try {
-						expression = parse_variable_declaration(tokens, cursor);
+						expression = parse_if(tokens, cursor, return_type);
 					}
 					catch (parse_exception) {
 						cursor = start_cursor;
 						try {
-							expression = parse_variable_value(tokens, cursor, return_type);
+							expression = parse_variable_declaration(tokens, cursor);
 						}
 						catch (parse_exception) {
 							cursor = start_cursor;
 							try {
-								expression = parse_constant(tokens, cursor, return_type);
+								expression = parse_variable_value(tokens, cursor, return_type);
 							}
 							catch (parse_exception) {
-								if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
-									++cursor;
-									throw block_done_exception();
+								cursor = start_cursor;
+								try {
+									expression = parse_constant(tokens, cursor, return_type);
 								}
-								throw unexpected_token(cursor);
+								catch (parse_exception) {
+									if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
+										++cursor;
+										throw block_done_exception();
+									}
+									throw unexpected_token(cursor);
+								}
 							}
 						}
 					}

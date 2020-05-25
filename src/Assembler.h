@@ -23,6 +23,7 @@ namespace Bonfire {
 		std::vector<Variable> glob_vars;
 		std::vector<std::string> labels;
 		uint32_t num_labels;
+		uint32_t name_counter; // To generate unique names
 
 		uint32_t get_stack_offset_by_var_name(std::string name) {
 			for (Variable v : glob_vars) {
@@ -34,6 +35,37 @@ namespace Bonfire {
 		}
 
 		void assemble_expression(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset);
+
+		void assemble_if(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset) {
+			IfST* if_st = static_cast<IfST*>(expression);
+			if (if_st->condition->type == AstType::ARITHMETIC_OP) {
+				OperationST* op_st = static_cast<OperationST*>(if_st->condition);
+				switch (op_st->op) {
+				case Operation::EQ:
+					// Parse the compare
+					// For now, assume that the left is a variable value and the right is a constant
+					VariableValST* lhs = static_cast<VariableValST*>(op_st->lhs);
+					ConstantST* rhs = static_cast<ConstantST*>(op_st->rhs);
+
+					stream << string_format(ASM_FORMAT_CMP_MEM_CONST, get_stack_offset_by_var_name(lhs->identifier), rhs->get_value().c_str());
+					++name_counter;
+					std::string continue_label_name = "__continue" + std::to_string(name_counter);
+					std::string else_label_name = "__else" + std::to_string(name_counter);
+					stream << string_format(ASM_FORMAT_JMP_NEQ, else_label_name.c_str());
+					// Put the then expression here
+					assemble_expression(stream, if_st->then_body, stack_offset);
+					// Unconditional jump to skip the else expression and continue program flow
+					stream << string_format(ASM_FORMAT_JMP, continue_label_name.c_str());
+
+					stream << string_format(ASM_FORMAT_LABEL, else_label_name.c_str());
+					assemble_expression(stream, if_st->else_body, stack_offset);
+
+					// Put the continue label after the if
+					stream << string_format(ASM_FORMAT_LABEL, continue_label_name.c_str());
+					break;
+				}
+			}
+		}
 
 		// Converts a string from any constant expression into a number
 		std::string const_as_num(std::string constant) {
@@ -62,8 +94,13 @@ namespace Bonfire {
 			block_stream << string_format(ASM_FORMAT_LABEL, block_label.c_str());
 			block_stream << ASM_SETUP_STACK_FRAME;
 			BlockST* block_st = static_cast<BlockST*>(block);
+
 			for (int i = 0; i < block_st->num_children; i++) {
 				assemble_expression(block_stream, block_st->children[i], stack_offset);
+			}
+
+			if (block_st->children[block_st->num_children - 1]->type != AstType::RETURN) {
+				block_stream << ASM_RETURN;
 			}
 			labels.push_back(block_stream.str());
 			return block_st;
@@ -77,15 +114,16 @@ namespace Bonfire {
 				{
 					ConstantST* constant = static_cast<ConstantST*>(ret_st->expression);
 					stream << string_format(ASM_FORMAT_RETURN_CONST, const_as_num(constant->get_value()).c_str());
-					return;
+					break;
 				}
 				case AstType::VAR_VALUE:
 				{
 					VariableValST* var_st = static_cast<VariableValST*>(ret_st->expression);
 					stream << string_format(ASM_FORMAT_RETURN_VAR, get_stack_offset_by_var_name(var_st->identifier));
-					return;
+					break;
 				}
 				}
+				stream << ASM_RETURN;
 			}
 		}
 
@@ -127,9 +165,7 @@ namespace Bonfire {
 			}
 		}
 
-		void assemble_if(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset) {
-
-		}
+		
 
 		void assemble_expression(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset) {
 			switch (expression->type) {
@@ -142,6 +178,9 @@ namespace Bonfire {
 			case AstType::VAR_DECLARATION:
 				assemble_var_declaration(stream, expression, stack_offset);
 				return;
+			case AstType::IF:
+				assemble_if(stream, expression, stack_offset);
+				return;
 			}
 		}
 
@@ -149,6 +188,7 @@ namespace Bonfire {
 			stream << string_format(ASM_FORMAT_LABEL, !function->name.compare("main") ? "_main" : function->name.c_str());
 			stream << ASM_SETUP_STACK_FRAME;
 			assemble_code_block(stream, function->statement, stack_offset);
+			stream << ASM_RETURN;
 		}
 
 		static std::string assemble(ProgramST* program) {
@@ -159,8 +199,6 @@ namespace Bonfire {
 
 			assemble_function(stream, program->main, stack_offset);
 
-			stream << ASM_RETURN;
-			stream << "\n";
 			for (std::string additional_label : labels) {
 				stream << additional_label;
 			}

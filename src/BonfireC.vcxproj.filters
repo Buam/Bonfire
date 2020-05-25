@@ -47,5 +47,8 @@
     <ClInclude Include="Assembler.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="assembler_if.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

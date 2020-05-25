@@ -50,7 +50,7 @@
 /* RETURN
  ret
 */
-#define ASM_RETURN "\tpop ebp\n\tret\n"
+#define ASM_RETURN "\tmov esp, ebp\n\tpop ebp\n\tret\n"
 
 /* SET RETURN VALUE AND RETURN, VARIABLE
  mov eax, DWORD PTR [ebp-%d]
@@ -60,7 +60,7 @@
  pop ebp
  ret            ; return
  */
-#define ASM_FORMAT_RETURN_VAR "\tmov eax, DWORD PTR [ebp-%u]\n\tpop ebp\n\tret\n"
+#define ASM_FORMAT_RETURN_VAR "\tmov eax, DWORD PTR [ebp-%u]\n"
 
 /* SET RETURN VALUE AND RETURN, CONSTANT
  mov eax, %d
@@ -70,9 +70,40 @@
  pop ebp
  ret           ; return
  */
-#define ASM_FORMAT_RETURN_CONST "\tmov eax, %s\n\tpop ebp\n\tret\n"
+#define ASM_FORMAT_RETURN_CONST "\tmov eax, %s\n"
 
 /* CALL LABEL
  call %s
 */
 #define ASM_FORMAT_CALL "\tcall %s\n"
+
+/* COMPARE MEM & CONSTANT
+ cmp DWORD PTR [ebp-%u], %d
+*/
+#define ASM_FORMAT_CMP_MEM_CONST "\tcmp DWORD PTR [ebp-%u], %s\n"
+
+/* COMPARE CONSTANT & MEM
+ cmp %d, DWORD PTR [ebp-%u]
+*/
+#define ASM_FORMAT_CMP_CONST_MEM "\tcmp %s, DWORD PTR [ebp-%u]\n"
+
+/* COMPARE MEM & MEM
+ mov ebx, DWORD PTR [ebp-%u]
+ cmp ebx, DWORD PTR [ebp-%u]
+*/
+#define ASM_FORMAT_CMP_MEM_MEM "\tmov ebx, DWORD PTR [ebp-%u]\n\tcmp ebx, DWORD PTR [ebp-%u]\n"
+
+/* UNCONDITIONAL JUMP
+ jmp %s
+*/
+#define ASM_FORMAT_JMP "\tjmp %s\n"
+
+/* JUMP EQUAL
+ je %s
+*/
+#define ASM_FORMAT_JMP_EQ "\tje %s\n"
+
+/* JUMP NOT EQUAL
+ jne %s
+*/
+#define ASM_FORMAT_JMP_NEQ "\tjne %s\n"

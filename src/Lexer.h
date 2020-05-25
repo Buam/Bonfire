@@ -69,6 +69,11 @@ namespace Bonfire {
 					token_indices.push_back(cursor);
 					++cursor;
 				}
+				else if (c == '=' && source[cursor + 1] == '=') {
+					tokens_out.push_back(Token(TokenType::EQUALS2, ""));
+					token_indices.push_back(cursor);
+					cursor += 2;
+				}
 				// =
 				else if (c == '=') {
 					tokens_out.push_back(Token(TokenType::EQUALS, ""));

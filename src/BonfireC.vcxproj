@@ -160,6 +160,7 @@
   <ItemGroup>
     <ClInclude Include="asm_format.h" />
     <ClInclude Include="Assembler.h" />
+    <ClInclude Include="assembler_if.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="FileUtils.h" />
     <ClInclude Include="Lexer.h" />

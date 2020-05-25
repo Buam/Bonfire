@@ -53,28 +53,18 @@ namespace Bonfire {
 			++cursor;
 			// If the token at the cursor is an operation, it is only one token: We use a switch
 			switch (tokens[cursor - 1].type) {
-			case TokenType::AND:
-				return Operation::AND;
-			case TokenType::ANDL:
-				return Operation::ANDL;
-			case TokenType::OR:
-				return Operation::OR;
-			case TokenType::ORL:
-				return Operation::ORL;
-			case TokenType::PLUS:
-				return Operation::ADD;
-			case TokenType::MINUS:
-				return Operation::SUB;
-			case TokenType::MUL:
-				return Operation::MUL;
-			case TokenType::SLASH:
-				return Operation::DIV;
-			case TokenType::MODULO:
-				return Operation::MOD;
-			case TokenType::POW:
-				return Operation::POW;
-			case TokenType::EQUALS2:
-				return Operation::EQ;
+			case TokenType::AND: return Operation::AND;
+			case TokenType::ANDL: return Operation::ANDL;
+			case TokenType::OR: return Operation::OR;
+			case TokenType::ORL: return Operation::ORL;
+			case TokenType::PLUS: return Operation::ADD;
+			case TokenType::MINUS: return Operation::SUB;
+			case TokenType::MUL: return Operation::MUL;
+			case TokenType::SLASH: return Operation::DIV;
+			case TokenType::MODULO: return Operation::MOD;
+			case TokenType::POW: return Operation::POW;
+			case TokenType::EQUALS2: return Operation::EQ;
+			case TokenType::NEQUALS: return Operation::NEQ;
 			default:
 				--cursor;
 				return Operation::NONE;
@@ -114,6 +104,21 @@ namespace Bonfire {
 				VariableValST* var_val_st = new VariableValST(tokens[cursor].value, expected_type);
 				++cursor;
 				return var_val_st;
+			}
+			throw parse_exception();
+		}
+
+		VariableAssignST* parse_variable_assignment(std::vector<Token>& tokens, uint64_t& cursor, Type expected_type) {
+			if (cursor + 3 >= tokens.size()) throw parse_exception();
+			if (tokens[cursor].type == TokenType::IDENTIFIER) {
+				std::string identifier = tokens[cursor].value;
+				++cursor;
+				if (tokens[cursor].type == TokenType::EQUALS) {
+					++cursor;
+					ExpressionST* var_value = parse_expression(tokens, cursor, expected_type);
+					VariableAssignST* var_assign_st = new VariableAssignST(identifier, expected_type, var_value);
+					return var_assign_st;
+				}
 			}
 			throw parse_exception();
 		}
@@ -198,19 +203,25 @@ namespace Bonfire {
 						catch (parse_exception) {
 							cursor = start_cursor;
 							try {
-								expression = parse_variable_value(tokens, cursor, return_type);
+								expression = parse_variable_assignment(tokens, cursor, return_type);
 							}
 							catch (parse_exception) {
 								cursor = start_cursor;
 								try {
-									expression = parse_constant(tokens, cursor, return_type);
+									expression = parse_variable_value(tokens, cursor, return_type);
 								}
 								catch (parse_exception) {
-									if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
-										++cursor;
-										throw block_done_exception();
+									cursor = start_cursor;
+									try {
+										expression = parse_constant(tokens, cursor, return_type);
 									}
-									throw unexpected_token(cursor);
+									catch (parse_exception) {
+										if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
+											++cursor;
+											throw block_done_exception();
+										}
+										throw unexpected_token(cursor);
+									}
 								}
 							}
 						}

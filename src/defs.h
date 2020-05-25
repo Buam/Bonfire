@@ -112,6 +112,7 @@ namespace Bonfire {
 		MOD,
 		POW,
 		EQ,
+		NEQ,
 		LT,
 		LTE,
 		GT,
@@ -199,6 +200,18 @@ namespace Bonfire {
 		}
 	};
 
+	struct VariableAssignST : public ExpressionST {
+		std::string identifier = "";
+		ExpressionST* value;
+
+		VariableAssignST(std::string identifier, Type var_type, ExpressionST* value) {
+			this->identifier = identifier;
+			this->return_type = var_type;
+			this->value = value;
+			type = AstType::VAR_ASSIGNMENT;
+		}
+	};
+
 	struct VariableDeclarationST : public ExpressionST {
 		std::string identifier = "";
 		Type var_type;
@@ -208,6 +221,7 @@ namespace Bonfire {
 			this->identifier = identifier;
 			this->var_type = var_type;
 			this->value = value;
+			this->return_type = Type::VOID;
 			type = AstType::VAR_DECLARATION;
 		}
 	};

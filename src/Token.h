@@ -13,6 +13,7 @@ namespace Bonfire {
 		COLON,			// : (type) or else
 		EQUALS,			// =
 		EQUALS2,		// ==
+		NEQUALS,		// !=
 		IF,				// ?
 		// Arithmetic operations
 		PLUS,			// +

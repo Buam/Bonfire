@@ -1,4 +1,10 @@
 #pragma once
+
+#define ASM_8 "BYTE"
+#define ASM_16 "WORD"
+#define ASM_32 "DWORD"
+#define ASM_64 "QWORD"
+
 /* FUNCTIONS   
  %s:
  ^^
@@ -25,32 +31,38 @@
  sub %d, esp
      ^^
      Bytes to allocate
- mov DWORD PTR [esp], %d
-                      ^^
-                Constant
+ mov %s PTR [esp], %d
+     ^^            ^^
+    Size         Constant
 */
-#define ASM_FORMAT_VAR_DEC_INIT "\tsub esp, %d\n\tmov DWORD PTR [esp], %d\n"
+#define ASM_FORMAT_VAR_DEC_INIT "\tmov %s PTR [ebp-%u], %d\n"
 
 /* VARIABLE DECLARATION & INITIALIZATION, VARIABLE
  sub %d, esp
      ^^
      Bytes to allocate
- mov DWORD PTR [esp], DWORD PTR [ebp-%d]
-                                     ^^
+ mov DWORD PTR [esp], %s PTR [ebp-%d]
+                                  ^^
                      Stack offset of rhs variable
 */
-#define ASM_FORMAT_VAR_DEC_INIT_VAR "\tsub esp, %d\n\tmov DWORD PTR [esp], DWORD PTR [ebp-%d]\n"
+#define ASM_FORMAT_VAR_DEC_INIT_VAR "\tmov ebx, %s PTR [ebp-%u]\n\tmov DWORD PTR [ebp-%d], ebx\n"
 
 /* VARIABLE DECLARATION & INITIALIZATION, EAX
  sub %d, esp
  mov DWORD PTR [esp], eax
 */
-#define ASM_FORMAT_VAR_DEC_RETURN "\tsub esp, %d\n\tmov DWORD PTR [esp], eax\n"
+#define ASM_FORMAT_VAR_DEC_RETURN "\tmov DWORD PTR [ebp-%u], eax\n"
+
+// [SIZE] [CONST]
+#define ASM_FORMAT_VAR_AS_CONST "\tmov %s PTR [ebp-%u], %d\n"
+
+// [SIZE] [MEM FROM] [SIZE] [MEM TO]
+#define ASM_FORMAT_VAR_AS_VAR "\tmov ebx, %s PTR [ebp-%u]\n\tmov %s PTR [ebp-%u], ebx\n"
 
 /* RETURN
  ret
 */
-#define ASM_RETURN "\tmov esp, ebp\n\tpop ebp\n\tret\n"
+#define ASM_RETURN "\tpop ebp\n\tret\n"
 
 /* SET RETURN VALUE AND RETURN, VARIABLE
  mov eax, DWORD PTR [ebp-%d]
@@ -61,6 +73,10 @@
  ret            ; return
  */
 #define ASM_FORMAT_RETURN_VAR "\tmov eax, DWORD PTR [ebp-%u]\n"
+
+#define ASM_FORMAT_RETURN_VAR_ZX "\tmovzx eax, %s PTR [ebp-%u]\n"
+
+#define ASM_FORMAT_RETURN_VAR_SX "\tmovsx eax, %s PTR [ebp-%u]\n"
 
 /* SET RETURN VALUE AND RETURN, CONSTANT
  mov eax, %d
@@ -80,18 +96,18 @@
 /* COMPARE MEM & CONSTANT
  cmp DWORD PTR [ebp-%u], %d
 */
-#define ASM_FORMAT_CMP_MEM_CONST "\tcmp DWORD PTR [ebp-%u], %s\n"
+#define ASM_FORMAT_CMP_MEM_CONST "\tcmp %s PTR [ebp-%u], %s\n"
 
 /* COMPARE CONSTANT & MEM
  cmp %d, DWORD PTR [ebp-%u]
 */
-#define ASM_FORMAT_CMP_CONST_MEM "\tcmp %s, DWORD PTR [ebp-%u]\n"
+#define ASM_FORMAT_CMP_CONST_MEM "\tcmp %s, %s PTR [ebp-%u]\n"
 
 /* COMPARE MEM & MEM
  mov ebx, DWORD PTR [ebp-%u]
  cmp ebx, DWORD PTR [ebp-%u]
 */
-#define ASM_FORMAT_CMP_MEM_MEM "\tmov ebx, DWORD PTR [ebp-%u]\n\tcmp ebx, DWORD PTR [ebp-%u]\n"
+#define ASM_FORMAT_CMP_MEM_MEM "\tmov ebx, %s PTR [ebp-%u]\n\tcmp ebx, %s PTR [ebp-%u]\n"
 
 /* UNCONDITIONAL JUMP
  jmp %s
@@ -107,3 +123,14 @@
  jne %s
 */
 #define ASM_FORMAT_JMP_NEQ "\tjne %s\n"
+
+#define ASM_FORMAT_JMP_GT "\tjg %s\n"
+#define ASM_FORMAT_JMP_GTE "\tjge %s\n"
+
+#define ASM_FORMAT_JMP_LT "\tjl %s\n"
+#define ASM_FORMAT_JMP_LTE "\tjle %s\n"
+
+/* STORE VARIABLE VALUE IN REGISTER
+ mov %s, DWORD PTR [ebp-%u]
+*/
+#define ASM_FORMAT_STORE_MEM_REG "\tmov %s, DWORD PTR [ebp-%u]\n"

@@ -53,9 +53,7 @@ namespace Bonfire {
 			++cursor;
 			// If the token at the cursor is an operation, it is only one token: We use a switch
 			switch (tokens[cursor - 1].type) {
-			case TokenType::AND: return Operation::AND;
 			case TokenType::ANDL: return Operation::ANDL;
-			case TokenType::OR: return Operation::OR;
 			case TokenType::ORL: return Operation::ORL;
 			case TokenType::PLUS: return Operation::ADD;
 			case TokenType::MINUS: return Operation::SUB;
@@ -69,6 +67,13 @@ namespace Bonfire {
 				--cursor;
 				return Operation::NONE;
 			}
+		}
+
+		// Looks through the whole operation sequence (expression, operator, expression, operator etc.)
+		// Returns an ordered Operation tree
+		// TODO: Implement with ()
+		OperationST* parse_op_sequence(std::vector<Token>& tokens, uint64_t& cursor, Type expected_type) {
+			return NULL;
 		}
 
 		ConstantST* parse_constant(std::vector<Token>& tokens, uint64_t& cursor, Type expected_type) {
@@ -118,6 +123,24 @@ namespace Bonfire {
 					ExpressionST* var_value = parse_expression(tokens, cursor, expected_type);
 					VariableAssignST* var_assign_st = new VariableAssignST(identifier, expected_type, var_value);
 					return var_assign_st;
+				}
+			}
+			throw parse_exception();
+		}
+
+		LoopST* parse_loop(std::vector<Token>& tokens, uint64_t& cursor, Type expected_type) {
+			if (cursor + 3 >= tokens.size()) throw parse_exception();
+			if (tokens[cursor].type == TokenType::OR) { // | TODO: Change name
+				++cursor;
+				if (tokens[cursor].type == TokenType::PAR_OPEN) {
+					++cursor;
+					ExpressionST* condition = parse_expression(tokens, cursor, Type::BOOLEAN);
+					if (tokens[cursor].type == TokenType::PAR_CLOSE) {
+						++cursor;
+						ExpressionST* body = parse_expression(tokens, cursor, Type::VOID);
+						LoopST* loop_st = new LoopST (condition, body);
+						return loop_st;
+					}
 				}
 			}
 			throw parse_exception();
@@ -198,29 +221,35 @@ namespace Bonfire {
 					catch (parse_exception) {
 						cursor = start_cursor;
 						try {
-							expression = parse_variable_declaration(tokens, cursor);
+							expression = parse_loop(tokens, cursor, return_type);
 						}
 						catch (parse_exception) {
 							cursor = start_cursor;
 							try {
-								expression = parse_variable_assignment(tokens, cursor, return_type);
+								expression = parse_variable_declaration(tokens, cursor);
 							}
 							catch (parse_exception) {
 								cursor = start_cursor;
 								try {
-									expression = parse_variable_value(tokens, cursor, return_type);
+									expression = parse_variable_assignment(tokens, cursor, return_type);
 								}
 								catch (parse_exception) {
 									cursor = start_cursor;
 									try {
-										expression = parse_constant(tokens, cursor, return_type);
+										expression = parse_variable_value(tokens, cursor, return_type);
 									}
 									catch (parse_exception) {
-										if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
-											++cursor;
-											throw block_done_exception();
+										cursor = start_cursor;
+										try {
+											expression = parse_constant(tokens, cursor, return_type);
 										}
-										throw unexpected_token(cursor);
+										catch (parse_exception) {
+											if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
+												++cursor;
+												throw block_done_exception();
+											}
+											throw unexpected_token(cursor);
+										}
 									}
 								}
 							}
@@ -241,13 +270,12 @@ namespace Bonfire {
 		}
 
 		BlockST* parse_code_block(std::vector<Token>& tokens, uint64_t& cursor, Type return_type) {
+			Type block_type = return_type;
 			if (tokens[cursor].type == TokenType::RETURN_TYPE) {
 				// See if it is the same type
 				++cursor;
 				if (tokens[cursor].type == TokenType::IDENTIFIER) {
-					if (parse_type(tokens[cursor].value) != return_type) {
-						throw parse_exception();
-					}
+					block_type = parse_type(tokens[cursor].value);
 					++cursor;
 				}
 			}
@@ -301,18 +329,15 @@ namespace Bonfire {
 		}
 
 		FunctionDefST* parse_function(std::vector<Token>& tokens, uint64_t& cursor) {
-			FunctionDefST* fun = new FunctionDefST();
-
 			if (tokens[cursor].type == TokenType::IDENTIFIER) {
-				fun->name = tokens[cursor].value;
+				std::string name = tokens[cursor].value;
 				++cursor;
 				if (tokens[cursor].type == TokenType::PAR_OPEN) {
 					++cursor;
 					if (tokens[cursor].type == TokenType::PAR_CLOSE) {
 						++cursor;
 						// Token at cursor is now '{', the beginning of the code, parse the code block
-						fun->statement = parse_code_block(tokens, cursor);
-						return fun;
+						return new FunctionDefST(name, parse_code_block(tokens, cursor));
 					}
 				}
 			}

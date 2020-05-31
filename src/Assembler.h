@@ -3,6 +3,8 @@
 #include <sstream>
 #include "asm_format.h"
 #include "defs.h"
+#include "asm_tree.h"
+#include "final_asm.h"
 
 #define ASM_ERR "err"
 
@@ -23,7 +25,6 @@ namespace Bonfire {
 		};
 
 		std::vector<Variable> glob_vars;
-		std::vector<std::string> labels;
 		uint32_t num_labels;
 		uint32_t name_counter; // To generate unique names
 
@@ -69,10 +70,14 @@ namespace Bonfire {
 			return "ERR";
 		}
 
-		void assemble_expression(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset);
+		void assemble_expression(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset, bool code_block, const char* code_block_label);
+		void assemble_expression(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
+			assemble_expression(instructions, expression, stack_offset, false, NULL);
+		}
+		void assemble_expression_stres(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset);
 
-		// Assemble a boolean condition, puts the result into reg
-		void assemble_compare_by_op(std::stringstream& stream, OperationST* op_st, uint32_t& stack_offset) {
+		// Assemble a simple comparison
+		void assemble_compare_by_op(std::vector<AssemblyInstruction*>& instructions, OperationST* op_st, uint32_t& stack_offset) {
 			if (op_st->lhs->type == AstType::VAR_VALUE && op_st->rhs->type == AstType::VAR_VALUE) {
 				// Compare two variables
 				VariableValST* lhs = static_cast<VariableValST*>(op_st->lhs);
@@ -106,16 +111,56 @@ namespace Bonfire {
 
 				stream << string_format(ASM_FORMAT_CMP_CONST_MEM, lhs->constant.c_str(), rhs_asm_size.c_str(), rhs_stack_offset);
 			}
+			else {
+				assemble_expression_stres(stream, op_st->lhs, stack_offset);
+				// Return value of expression is stored in eax, move it to ebx
+				stream << string_format(ASM_FORMAT_MOVE_REG_REG, "ebx", "eax");
+				assemble_expression_stres(stream, op_st->rhs, stack_offset);
+				// Compare the result of the lhs (now in ebx) and the result of rhs (in eax)
+				stream << string_format(ASM_FORMAT_CMP_REG_REG, "ebx", "eax");
+			}
 		}
 
-		void assemble_if(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset) {
+		void assemble_loop(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
+			LoopST* loop_st = static_cast<LoopST*>(expression);
+
+			//bool is_op = loop_st->condition->type == AstType::OPERATION;
+			if (loop_st->condition->type == AstType::VAR_VALUE) {
+				std::string beginning_label_name = "__w_begin" + std::to_string(name_counter);
+				std::string continue_label_name = "__w_continue" + std::to_string(name_counter);
+				++name_counter;
+
+				// Set begin label
+				stream << string_format(ASM_FORMAT_LABEL, beginning_label_name.c_str());
+				// TODO: Assemble operations and comparisons correctly
+
+				// TODO: Add things other than variables
+				// This is a variable, compare with 0 (0 = false, so if equals, we jump to else)
+				VariableValST* var_st = static_cast<VariableValST*>(loop_st->condition);
+				uint32_t var_stack_offset = get_stack_offset_by_var_name(var_st->identifier);
+				std::string asm_size = get_asm_size(var_st->return_type);
+				// Compare with 0 (false)
+				stream << string_format(ASM_FORMAT_CMP_MEM_CONST, asm_size.c_str(), var_stack_offset, "0");
+				// If it is 0 (false) then jump to else
+				stream << string_format(ASM_FORMAT_JMP_EQ, continue_label_name.c_str());
+
+				// Loop body
+				assemble_expression(stream, loop_st->body, stack_offset);
+				// jump to beginning (loop)
+				stream << string_format(ASM_FORMAT_JMP, beginning_label_name.c_str());
+				// continue label
+				stream << string_format(ASM_FORMAT_LABEL, continue_label_name.c_str());
+			}
+		}
+
+		void assemble_if(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
 			IfST* if_st = static_cast<IfST*>(expression);
-			bool is_op = if_st->condition->type == AstType::ARITHMETIC_OP;
+			bool is_op = if_st->condition->type == AstType::OPERATION;
 			if (is_op || if_st->condition->type == AstType::VAR_VALUE) {
 				std::string else_label_name = "__else" + std::to_string(name_counter);
 				std::string continue_label_name = "__continue" + std::to_string(name_counter);
-
 				++name_counter;
+
 				if (is_op) {
 					OperationST* op_st = static_cast<OperationST*>(if_st->condition);
 					// Assemble comparison based on the operation
@@ -141,7 +186,7 @@ namespace Bonfire {
 						jump_format = ASM_FORMAT_JMP_LT;
 						break;
 					}
-					stream << string_format(jump_format, else_label_name.c_str());
+					stream << string_format(jump_format, if_st->has_else ? else_label_name.c_str() : continue_label_name.c_str());
 				}
 				else {
 					// This is a variable, compare with 0 (0 = false, so if equals, we jump to else)
@@ -150,7 +195,7 @@ namespace Bonfire {
 					std::string asm_size = get_asm_size(var_st->return_type);
 					// Compare with 0 (false)
 					stream << string_format(ASM_FORMAT_CMP_MEM_CONST, asm_size.c_str(), var_stack_offset, "0");
-					// If it is 0 (false) then jump to else
+					// If it is 0 (false) then jump to else or continue
 					stream << string_format(ASM_FORMAT_JMP_EQ, if_st->has_else ? else_label_name.c_str() : continue_label_name.c_str());
 				}
 
@@ -185,23 +230,25 @@ namespace Bonfire {
 			return "__block" + std::to_string(block_id);
 		}
 
-		BlockST* assemble_only_code_block(std::stringstream& stream, BlockST* block, uint32_t& stack_offset) {
+		BlockST* assemble_only_code_block(std::vector<AssemblyInstruction*>& instructions, BlockST* block, uint32_t& stack_offset, bool code_block, const char* code_block_label) {
 			for (int i = 0; i < block->num_children; i++) {
-				assemble_expression(stream, block->children[i], stack_offset);
+				assemble_expression(stream, block->children[i], stack_offset, code_block, code_block_label);
 			}
 			return block;
 		}
 
-		BlockST* assemble_only_code_block(std::stringstream& stream, ExpressionST* block, uint32_t& stack_offset) {
+		BlockST* assemble_only_code_block(std::vector<AssemblyInstruction*>& instructions, ExpressionST* block, uint32_t& stack_offset, bool code_block, const char* code_block_label) {
 			BlockST* block_st = static_cast<BlockST*>(block);
-			return assemble_only_code_block(stream, block_st, stack_offset);
+			return assemble_only_code_block(stream, block_st, stack_offset, code_block, code_block_label);
 		}
 
-		BlockST* assemble_code_block(std::stringstream& stream, ExpressionST* block, uint32_t& stack_offset) {
+		BlockST* assemble_code_block(std::vector<AssemblyInstruction*>& instructions, ExpressionST* block, uint32_t& stack_offset) {
 
 			BlockST* block_st = static_cast<BlockST*>(block);
 			// See if we have to set up a stack frame
 			bool stack_frame = false;
+			std::string end_label = "__block" + std::to_string(num_labels) + "_end";
+			++num_labels;
 
 			for (int i = 0; i < block_st->num_children; i++) {
 				if (block_st->children[i]->type == AstType::VAR_DECLARATION) {
@@ -211,29 +258,19 @@ namespace Bonfire {
 			}
 
 			if (stack_frame) {
-				std::stringstream block_stream;
-
-				std::string block_label = get_block_label(num_labels).c_str();
-				++num_labels;
-
-				stream << string_format(ASM_FORMAT_CALL, block_label.c_str());
-
-				block_stream << string_format(ASM_FORMAT_LABEL, block_label.c_str());
-				block_stream << ASM_SETUP_STACK_FRAME;
-				assemble_only_code_block(block_stream, block_st, stack_offset);
-				if (block_st->children[block_st->num_children - 1]->type != AstType::RETURN) {
-					block_stream << ASM_RETURN;
-				}
-
-				labels.push_back(block_stream.str());
+				uint32_t start_stack_offset = stack_offset;
+				assemble_only_code_block(stream, block_st, stack_offset, true, end_label.c_str());
+				stack_offset = start_stack_offset;
 			}
 			else {
-				assemble_only_code_block(stream, block_st, stack_offset);
+				assemble_only_code_block(stream, block_st, stack_offset, true, end_label.c_str());
 			}
+			// Set block end label, if the last expression of the code block was not a return
+			stream << string_format(ASM_FORMAT_LABEL, end_label.c_str());
 			return block_st;
 		}
 
-		void assemble_return(std::stringstream& stream, ExpressionST* ret, uint32_t& stack_offset) {
+		void assemble_return(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset, bool code_block, const char* code_block_end_label) {
 			ReturnST* ret_st = static_cast<ReturnST*>(ret);
 			if (ret_st) {
 				switch (ret_st->expression->type) {
@@ -263,21 +300,28 @@ namespace Bonfire {
 					break;
 				}
 				}
-				stream << ASM_RETURN;
+				if (code_block) {
+					//stream << string_format(ASM_FORMAT_JMP, code_block_end_label);
+					instructions.push_back(new Asm1<std::string>(AsmType::JUMP, code_block_end_label));
+				}
+				else {
+					//stream << ASM_RETURN;
+					instructions.push_back(new AssemblyInstruction(AsmType::RETURN));
+				}
 			}
 		}
 
-		void assemble_var_assignment(std::stringstream& stream, ExpressionST* ret, uint32_t& stack_offset) {
+		void assemble_var_assignment(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset) {
 			VariableAssignST* var_st = static_cast<VariableAssignST*>(ret);
 			switch (var_st->value->type) {
 			case AstType::CONSTANT:
 			{
 				ConstantST* constant = static_cast<ConstantST*>(var_st->value);
-				int64_t num = std::stoi(const_as_num(constant->get_value()).c_str());
 				uint32_t stack_offset = get_stack_offset_by_var_name(var_st->identifier);
 				std::string asm_size = get_asm_size(get_size_by_var_name(var_st->identifier));
 
-				stream << string_format(ASM_FORMAT_VAR_AS_CONST, asm_size.c_str(), stack_offset, num);
+				//stream << string_format(ASM_FORMAT_VAR_AS_CONST, asm_size.c_str(), stack_offset, num);
+				instructions.push_back(new Asm3<std::string, uint32_t, std::string>(AsmType::MOVE_MEM_CONST, asm_size, stack_offset, constant->constant));
 				return;
 			}
 			case AstType::VAR_VALUE:
@@ -288,13 +332,14 @@ namespace Bonfire {
 				uint32_t lhs_stack_offset = get_stack_offset_by_var_name(var_st->identifier);
 				std::string lhs_asm_size = get_asm_size(get_size_by_var_name(var_st->identifier));
 
-				stream << string_format(ASM_FORMAT_VAR_AS_VAR, rhs_asm_size.c_str(), rhs_stack_offset, lhs_asm_size.c_str(), lhs_stack_offset);
+				//stream << string_format(ASM_FORMAT_VAR_AS_VAR, rhs_asm_size.c_str(), rhs_stack_offset, lhs_asm_size.c_str(), lhs_stack_offset);
+				instructions.push_back(new Asm4<std::string, uint32_t, std::string, uint32_t>(AsmType::MOVE_MEM_MEM, lhs_asm_size, lhs_stack_offset, rhs_asm_size, rhs_stack_offset));
 				return;
 			}
 			}
 		}
 
-		void assemble_var_declaration(std::stringstream& stream, ExpressionST* ret, uint32_t& stack_offset) {
+		void assemble_var_declaration(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset) {
 			VariableDeclarationST* var_st = static_cast<VariableDeclarationST*>(ret);
 			if (var_st) {
 				switch (var_st->value->type) {
@@ -307,7 +352,8 @@ namespace Bonfire {
 					std::string asm_size = get_asm_size(constant->return_type);
 
 					stack_offset += size;
-					stream << string_format(ASM_FORMAT_VAR_DEC_INIT, asm_size.c_str(), stack_offset, num);
+					//stream << string_format(ASM_FORMAT_VAR_DEC_INIT, asm_size.c_str(), stack_offset, num);
+					instructions.push_back(new Asm3<std::string, uint32_t, std::string>(AsmType::MOVE_MEM_CONST, asm_size, stack_offset, constant->constant));
 
 					glob_vars.push_back(Variable(var_st->identifier, stack_offset, constant->return_type));
 					return;
@@ -321,18 +367,20 @@ namespace Bonfire {
 					std::string asm_size = get_asm_size(var_rhs->return_type);
 					stack_offset += size;
 
-					stream << string_format(ASM_FORMAT_VAR_DEC_INIT_VAR, asm_size.c_str(), rhs_stack_offset, stack_offset);
+					//stream << string_format(ASM_FORMAT_VAR_DEC_INIT_VAR, asm_size.c_str(), rhs_stack_offset, stack_offset);
+					instructions.push_back(new Asm4<std::string, uint32_t, std::string, uint32_t>(AsmType::MOVE_MEM_MEM, asm_size, stack_offset, asm_size, rhs_stack_offset));
 
 					glob_vars.push_back(Variable(var_st->identifier, stack_offset, var_rhs->return_type));
 					return;
 				}
 				case AstType::BLOCK:
-					BlockST* block_st = assemble_code_block(stream, var_st->value, stack_offset);
+					BlockST* block_st = assemble_code_block(instructions, var_st->value, stack_offset);
 
 					uint8_t size = get_type_size(block_st->return_type);
 					stack_offset += size;
 
-					stream << string_format(ASM_FORMAT_VAR_DEC_RETURN, stack_offset);
+					//stream << string_format(ASM_FORMAT_VAR_DEC_RETURN, stack_offset);
+					//instructions.push_back(new Asm2<std::string, uin32_t);
 
 					glob_vars.push_back(Variable(var_st->identifier, stack_offset, block_st->return_type));
 					return;
@@ -340,50 +388,74 @@ namespace Bonfire {
 			}
 		}
 
-		void assemble_expression(std::stringstream& stream, ExpressionST* expression, uint32_t& stack_offset) {
+		void assemble_expression(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset, bool code_block, const char* code_block_end_label) {
 			switch (expression->type) {
 			case AstType::BLOCK:
-				assemble_code_block(stream, expression, stack_offset);
+				assemble_code_block(instructions, expression, stack_offset);
 				return;
 			case AstType::RETURN:
-				assemble_return(stream, expression, stack_offset);
+				assemble_return(instructions, expression, stack_offset, code_block, code_block_end_label);
 				return;
 			case AstType::VAR_DECLARATION:
-				assemble_var_declaration(stream, expression, stack_offset);
+				assemble_var_declaration(instructions, expression, stack_offset);
 				return;
 			case AstType::VAR_ASSIGNMENT:
-				assemble_var_assignment(stream, expression, stack_offset);
+				assemble_var_assignment(instructions, expression, stack_offset);
 				return;
 			case AstType::IF:
-				assemble_if(stream, expression, stack_offset);
+				assemble_if(instructions, expression, stack_offset);
+				return;
+			case AstType::LOOP:
+				assemble_loop(instructions, expression, stack_offset);
 				return;
 			}
 		}
 
-		void assemble_function(std::stringstream& stream, FunctionDefST* function, uint32_t& stack_offset) {
-			stream << string_format(ASM_FORMAT_LABEL, !function->name.compare("main") ? "_main" : function->name.c_str());
-			// Setup stack frame for this function
-			stream << ASM_SETUP_STACK_FRAME;
-			BlockST* block_st = assemble_only_code_block(stream, function->statement, stack_offset);
+		// Assemble an expression and store the result in eax
+		void assemble_expression_stres(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
+			switch (expression->type) {
+			case AstType::BLOCK:
+				assemble_code_block(instructions, expression, stack_offset);
+				return;
+			case AstType::CONSTANT:
+			{
+				ConstantST* constant = static_cast<ConstantST*>(expression);
+				//stream << string_format(ASM_FORMAT_RETURN_CONST, constant->constant.c_str());
+				instructions.push_back(new Asm2<std::string, std::string>(AsmType::MOVE_REG_CONST, "eax", constant->constant));
+				return;
+			}
+			case AstType::VAR_VALUE:
+			{
+				VariableValST* var = static_cast<VariableValST*>(expression);
+				//stream << string_format(ASM_FORMAT_RETURN_VAR, get_stack_offset_by_var_name(var->identifier));
+				instructions.push_back(new Asm2<std::string, uint32_t>(AsmType::MOVE_REG_MEM, "eax", get_stack_offset_by_var_name(var->identifier)));
+				return;
+			}
+			}
+		}
 
+		void assemble_function(std::vector<AssemblyInstruction*>& instructions, FunctionDefST* function, uint32_t& stack_offset) {
+			//stream << string_format(ASM_FORMAT_LABEL, !function->name.compare("main") ? "_main" : function->name.c_str());
+			instructions.push_back(new Asm1<std::string>(AsmType::LABEL, !function->name.compare("main") ? "_main" : function->name));
+			// Setup stack frame for this function
+			//stream << ASM_SETUP_STACK_FRAME;
+			instructions.push_back(new AssemblyInstruction(AsmType::SETUP_SF));
+			BlockST* block_st = assemble_only_code_block(instructions, function->statement, stack_offset, false, "");
+
+			// TODO: This only works if the return statement is the last expression in the code block
 			if (block_st->children[block_st->num_children - 1]->type != AstType::RETURN) {
-				stream << ASM_RETURN;
+				//stream << ASM_RETURN;
+				instructions.push_back(new AssemblyInstruction(AsmType::RETURN));
 			}
 		}
 
 		static std::string assemble(ProgramST* program) {
-			std::stringstream stream;
-			stream << ASM_FORMAT_PROGRAM;
 
 			uint32_t stack_offset = 0;
+			std::vector<AssemblyInstruction*> instructions;
+			assemble_function(instructions, program->main, stack_offset);
 
-			assemble_function(stream, program->main, stack_offset);
-
-			for (std::string additional_label : labels) {
-				stream << additional_label;
-			}
-
-			return stream.str();
+			return final_assemble(instructions);
 		}
 	}
 }

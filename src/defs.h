@@ -61,14 +61,6 @@ namespace Bonfire {
 		if (!can_be_unsigned && (lhs == Type::UINT8 || rhs == Type::UINT8 || lhs == Type::INT8 || rhs == Type::INT8)) return Type::INT8;
 	}
 
-	enum class ExpressionType {
-		VAR_DECLARE,
-		VAR_ASSIGN,
-		VAR_VALUE,
-		FUNCTION_CALL,
-		RETURN
-	};
-
 	// Represents a variable definition, including its runtime position on the stack
 	struct VariableDef {
 		const char* identifier;
@@ -90,8 +82,7 @@ namespace Bonfire {
 		PROGRAM,
 		BLOCK,
 		IF,
-		IF_BODY,
-		IF_ELSE_BODY,
+		LOOP,
 		RETURN,
 		CONSTANT,
 		FUNCTION,
@@ -100,7 +91,7 @@ namespace Bonfire {
 		VAR_DECLARATION,
 		VAR_DECL_INIT,
 		VAR_VALUE,
-		ARITHMETIC_OP
+		OPERATION
 	};
 
 	enum class Operation {
@@ -131,10 +122,6 @@ namespace Bonfire {
 		AbstractSyntaxTree(AstType type) {
 			this->type = type;
 		}
-
-		~AbstractSyntaxTree() {
-			// TODO
-		}
 	};
 
 	struct ExpressionST : public AbstractSyntaxTree {
@@ -162,6 +149,18 @@ namespace Bonfire {
 		}
 	};
 
+	struct LoopST : public ExpressionST {
+		ExpressionST* condition;
+		ExpressionST* body;
+
+		LoopST(ExpressionST* condition, ExpressionST* body) {
+			this->type = AstType::LOOP;
+			this->return_type = Type::VOID;
+			this->condition = condition;
+			this->body = body;
+		}
+	};
+
 	struct IfST : public ExpressionST {
 		bool has_else = false;
 		ExpressionST* condition;
@@ -169,18 +168,18 @@ namespace Bonfire {
 		ExpressionST* else_body;
 
 		IfST(ExpressionST* condition, ExpressionST* then_body, Type return_type) {
+			this->type = AstType::IF;
 			this->condition = condition;
 			this->return_type = return_type;
-			type = AstType::IF;
-			has_else = false;
+			this->has_else = false;
 			this->then_body = then_body;
 		}
 
 		IfST(ExpressionST* condition, ExpressionST* then_body, ExpressionST* else_body, Type return_type) {
+			this->type = AstType::IF;
 			this->condition = condition;
 			this->return_type = return_type;
-			type = AstType::IF;
-			has_else = true;
+			this->has_else = true;
 			this->then_body = then_body;
 			this->else_body = else_body;
 		}
@@ -194,9 +193,9 @@ namespace Bonfire {
 		std::string identifier = "";
 
 		VariableValST(std::string identifier, Type var_type) {
+			this->type = AstType::VAR_VALUE;
 			this->identifier = identifier;
 			this->return_type = var_type;
-			this->type = AstType::VAR_VALUE;
 		}
 	};
 
@@ -205,10 +204,10 @@ namespace Bonfire {
 		ExpressionST* value;
 
 		VariableAssignST(std::string identifier, Type var_type, ExpressionST* value) {
+			this->type = AstType::VAR_ASSIGNMENT;
 			this->identifier = identifier;
 			this->return_type = var_type;
 			this->value = value;
-			type = AstType::VAR_ASSIGNMENT;
 		}
 	};
 
@@ -218,11 +217,11 @@ namespace Bonfire {
 		ExpressionST* value;
 
 		VariableDeclarationST(std::string identifier, Type var_type, ExpressionST* value) {
+			this->type = AstType::VAR_DECLARATION;
 			this->identifier = identifier;
 			this->var_type = var_type;
 			this->value = value;
 			this->return_type = Type::VOID;
-			type = AstType::VAR_DECLARATION;
 		}
 	};
 
@@ -253,10 +252,10 @@ namespace Bonfire {
 		OperationST() {}
 		
 		OperationST(Operation op, ExpressionST* lhs, ExpressionST* rhs) {
+			this->type = AstType::OPERATION;
 			this->op = op;
 			this->lhs = lhs;
 			this->rhs = rhs;
-			type = AstType::ARITHMETIC_OP;
 			switch (op) {
 			case Operation::EQ:
 			case Operation::LT:
@@ -282,8 +281,6 @@ namespace Bonfire {
 		std::string name = "";
 		BlockST* statement = NULL;
 
-		FunctionDefST() {}
-
 		FunctionDefST(std::string name, BlockST* statement) {
 			this->name = name;
 			this->statement = statement;
@@ -294,6 +291,7 @@ namespace Bonfire {
 		FunctionDefST* main;
 
 		ProgramST(FunctionDefST* main) {
+			this->type = AstType::PROGRAM;
 			this->main = main;
 		}
 	};
@@ -302,8 +300,8 @@ namespace Bonfire {
 		ExpressionST* expression;
 
 		ReturnST(ExpressionST* expression) {
-			this->return_type = Type::VOID;
 			this->type = AstType::RETURN;
+			this->return_type = Type::VOID;
 			this->expression = expression;
 		}
 	};

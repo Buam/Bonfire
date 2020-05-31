@@ -1,6 +1,7 @@
 # Bonfire
 ![Progress](https://img.shields.io/badge/Progress-20%25-orange "Progress: 20%")
 ![License](https://img.shields.io/badge/License-MIT-green "License: MIT")
+![Status](https://img.shields.io/badge/Status-Works%20on%20my%20machine-yellowgreen "Works on my machine")
 
 Primitive compiler for a language I called Bonfire.  
 Compiles to Intel-Syntax Assembly for the GNU Assembler (part of [GCC](https://gcc.gnu.org))

@@ -1,6 +1,7 @@
 # Bonfire
 ![Progress](https://img.shields.io/badge/Progress-20%25-orange "Progress: 20%")
 ![License](https://img.shields.io/badge/License-MIT-green "License: MIT")
+[![CodeFactor](https://www.codefactor.io/repository/github/buam/bonfire/badge)](https://www.codefactor.io/repository/github/buam/bonfire)
 ![Status](https://img.shields.io/badge/Status-Works%20on%20my%20machine-yellowgreen "Works on my machine")
 [![HitCount](http://hits.dwyl.com/Buam/Bonfire.svg)](http://hits.dwyl.com/Buam/Bonfire)
 

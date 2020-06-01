@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
 #include <set>
-#include "Lexer.h"
-#include "Token.h"
-#include "defs.h"
-#include "asm_format.h"
+
+#include "lexer/lexer.h"
+#include "lexer/token.h"
+#include "ast.h"
 
 namespace Bonfire {
 	namespace Parser {
@@ -211,17 +211,17 @@ namespace Bonfire {
 			catch (parse_exception) {
 				cursor = start_cursor;
 				try {
-					expression = parse_code_block(tokens, cursor, return_type);
+					expression = parse_code_block(tokens, cursor, Type::VOID);
 				}
 				catch (parse_exception) {
 					cursor = start_cursor;
 					try {
-						expression = parse_if(tokens, cursor, return_type);
+						expression = parse_if(tokens, cursor, Type::VOID);
 					}
 					catch (parse_exception) {
 						cursor = start_cursor;
 						try {
-							expression = parse_loop(tokens, cursor, return_type);
+							expression = parse_loop(tokens, cursor, Type::VOID);
 						}
 						catch (parse_exception) {
 							cursor = start_cursor;
@@ -231,17 +231,17 @@ namespace Bonfire {
 							catch (parse_exception) {
 								cursor = start_cursor;
 								try {
-									expression = parse_variable_assignment(tokens, cursor, return_type);
+									expression = parse_variable_assignment(tokens, cursor, Type::VOID);
 								}
 								catch (parse_exception) {
 									cursor = start_cursor;
 									try {
-										expression = parse_variable_value(tokens, cursor, return_type);
+										expression = parse_variable_value(tokens, cursor, Type::VOID);
 									}
 									catch (parse_exception) {
 										cursor = start_cursor;
 										try {
-											expression = parse_constant(tokens, cursor, return_type);
+											expression = parse_constant(tokens, cursor, Type::VOID);
 										}
 										catch (parse_exception) {
 											if (tokens[cursor].type == TokenType::BRACE_CLOSE) {

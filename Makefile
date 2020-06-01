@@ -124,19 +124,19 @@ bonfirec/fast:
 .PHONY : bonfirec/fast
 
 # target to build an object file
-src/BonfireC.o:
-	$(MAKE) -f CMakeFiles/bonfirec.dir/build.make CMakeFiles/bonfirec.dir/src/BonfireC.o
-.PHONY : src/BonfireC.o
+src/bonfirec.o:
+	$(MAKE) -f CMakeFiles/bonfirec.dir/build.make CMakeFiles/bonfirec.dir/src/bonfirec.o
+.PHONY : src/bonfirec.o
 
 # target to preprocess a source file
-src/BonfireC.i:
-	$(MAKE) -f CMakeFiles/bonfirec.dir/build.make CMakeFiles/bonfirec.dir/src/BonfireC.i
-.PHONY : src/BonfireC.i
+src/bonfirec.i:
+	$(MAKE) -f CMakeFiles/bonfirec.dir/build.make CMakeFiles/bonfirec.dir/src/bonfirec.i
+.PHONY : src/bonfirec.i
 
 # target to generate assembly for a file
-src/BonfireC.s:
-	$(MAKE) -f CMakeFiles/bonfirec.dir/build.make CMakeFiles/bonfirec.dir/src/BonfireC.s
-.PHONY : src/BonfireC.s
+src/bonfirec.s:
+	$(MAKE) -f CMakeFiles/bonfirec.dir/build.make CMakeFiles/bonfirec.dir/src/bonfirec.s
+.PHONY : src/bonfirec.s
 
 # Help Target
 help:
@@ -147,9 +147,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... bonfirec"
 	@echo "... edit_cache"
-	@echo "... src/BonfireC.o"
-	@echo "... src/BonfireC.i"
-	@echo "... src/BonfireC.s"
+	@echo "... src/bonfirec.o"
+	@echo "... src/bonfirec.i"
+	@echo "... src/bonfirec.s"
 .PHONY : help
 
 

@@ -1,9 +1,10 @@
 #pragma once
 #include <vector>
 #include <set>
-#include "Token.h"
-#include "Parser.h"
-#include "strutils.h"
+
+#include "parser/parser.h"
+#include "utils/strutils.h"
+#include "token.h"
 
 namespace Bonfire {
 	namespace Lexer {

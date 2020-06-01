@@ -1,3 +1,0 @@
-/home/sven/projects/bonfire/CMakeFiles/rebuild_cache.dir
-/home/sven/projects/bonfire/CMakeFiles/bonfirec.dir
-/home/sven/projects/bonfire/CMakeFiles/edit_cache.dir

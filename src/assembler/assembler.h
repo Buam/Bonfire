@@ -1,10 +1,11 @@
 #pragma once
 #include <string>
 #include <sstream>
-#include "asm_format.h"
-#include "defs.h"
-#include "asm_tree.h"
-#include "final_asm.h"
+
+#include "assembler/format.h"
+#include "assembler/instructions.h"
+#include "assembler/final.h"
+#include "ast.h"
 
 #define ASM_ERR "err"
 

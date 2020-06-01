@@ -1,12 +1,12 @@
 #include <iostream>
 #include <string.h>
 
-#include "FileUtils.h"
-#include "PreProcessor.h"
-#include "Lexer.h"
-#include "Assembler.h"
-#include "defs.h"
-#include "Parser.h"
+#include "utils/fileutils.h"
+#include "preprocessor/preprocessor.h"
+#include "lexer/lexer.h"
+#include "assembler/assembler.h"
+#include "parser/parser.h"
+#include "ast.h"
 
 using namespace Bonfire;
 

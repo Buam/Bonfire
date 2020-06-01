@@ -4,9 +4,9 @@
 #include <vector>
 #include <cstdlib>
 
-#include "asm_tree.h"
-#include "asm_format.h"
-#include "strutils.h"
+#include "assembler/instructions.h"
+#include "assembler/format.h"
+#include "utils/strutils.h"
 
 namespace Bonfire {
 

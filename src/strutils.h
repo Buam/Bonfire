@@ -17,7 +17,7 @@ namespace Bonfire {
 		snprintf(buf.get(), size, format.c_str(), args ...);
 		return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside*/
 		char buf[1024];
-		sprintf_s(buf, format, args ...);
+		sprintf(buf, format, args ...);
 
 		std::string s(buf);
 

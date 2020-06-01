@@ -38,6 +38,9 @@ namespace Bonfire {
 
 	struct AssemblyInstruction {
 		AsmType type;
+
+		AssemblyInstruction() {}
+
 		AssemblyInstruction(AsmType type) {
 			this->type = type;
 		}
@@ -56,7 +59,7 @@ namespace Bonfire {
 	struct Asm2 : AssemblyInstruction {
 		T data1;
 		E data2;
-		Asm2(AsmType type, T data, E data2) {
+		Asm2(AsmType type, T data1, E data2) {
 			this->type = type;
 			this->data1 = data1;
 			this->data2 = data2;

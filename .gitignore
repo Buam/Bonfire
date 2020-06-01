@@ -1,5 +1,9 @@
 /Debug/**
 /CMakeFiles/
-/Makefile
-/cmake_install.cmake
-/CMakeCache.txt
+Makefile
+cmake_install.cmake
+CMakeCache.txt
+CMakeLists.txt.user
+bonfirec
+test.bf
+test.s

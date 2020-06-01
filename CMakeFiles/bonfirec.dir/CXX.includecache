@@ -23,6 +23,8 @@ final_asm.h
 /home/sven/projects/bonfire/src/BonfireC.cpp
 iostream
 -
+string.h
+-
 FileUtils.h
 /home/sven/projects/bonfire/src/FileUtils.h
 PreProcessor.h

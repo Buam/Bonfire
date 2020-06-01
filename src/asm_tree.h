@@ -36,6 +36,25 @@ namespace Bonfire {
 		JUMP_LTE
 	};
 
+	const char* asmtype_to_string(AsmType type) {
+		switch(type) {
+			case AsmType::PROGRAM:
+				return "Program";
+			case AsmType::LABEL:
+				return "Label";
+			case AsmType::SETUP_SF:
+				return "Setup Stackframe";
+			case AsmType::CLOSE_SF:
+				return "Close Stackframe";
+			case AsmType::RETURN:
+				return "Return";
+			case AsmType::MOVE_REG_MEM:
+				return "Move Reg Mem";
+			default:
+				return "Other";
+		}
+	}
+
 	struct AssemblyInstruction {
 		AsmType type;
 
@@ -48,10 +67,10 @@ namespace Bonfire {
 
 	template<class T>
 	struct Asm1 : AssemblyInstruction {
-		T data;
-		Asm1(AsmType type, T data) {
+		T data1;
+		Asm1(AsmType type, T data1) {
 			this->type = type;
-			this->data = data;
+			this->data1 = data1;
 		}
 	};
 
@@ -71,7 +90,7 @@ namespace Bonfire {
 		T data1;
 		E data2;
 		F data3;
-		Asm3(AsmType type, T data, E data2, F data3) {
+		Asm3(AsmType type, T data1, E data2, F data3) {
 			this->type = type;
 			this->data1 = data1;
 			this->data2 = data2;

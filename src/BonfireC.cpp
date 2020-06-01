@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string.h>
 
 #include "FileUtils.h"
 #include "PreProcessor.h"

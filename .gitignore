@@ -1,4 +1,4 @@
 /Debug/**
-/CmakeFiles/**
-/Makefile
-/cmake_install.cmake
+/CmakeFiles
+Makefile
+cmake_install.cmake

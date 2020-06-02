@@ -1,9 +1,8 @@
 # Bonfire
 ![Progress](https://img.shields.io/badge/Progress-20%25-orange "Progress: 20%")
 ![License](https://img.shields.io/badge/License-MIT-green "License: MIT")
-[![CodeFactor](https://www.codefactor.io/repository/github/buam/bonfire/badge)](https://www.codefactor.io/repository/github/buam/bonfire)
-![Status](https://img.shields.io/badge/Status-Works%20on%20my%20machine-yellowgreen "Works on my machine")
-[![HitCount](http://hits.dwyl.com/Buam/Bonfire.svg)](http://hits.dwyl.com/Buam/Bonfire)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/Buam/Bonfire.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Buam/Bonfire/alerts/)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/Buam/Bonfire.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Buam/Bonfire/context:cpp)
 
 Primitive compiler for a language I called Bonfire.  
 Compiles to Intel-Syntax Assembly for the GNU Assembler (part of [GCC](https://gcc.gnu.org))

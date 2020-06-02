@@ -55,8 +55,12 @@ namespace Bonfire {
 				return "<-";
 			case TokenType::RETURN_TYPE:
 				return "->";
+			case TokenType::IF:
+				return "?";
 			case TokenType::CONSTANT:
 				return value.c_str();
+			default:
+				return "Unknown token";
 			}
 		}
 

@@ -46,6 +46,7 @@ int64_t find_line_by_token(int64_t token_index) {
 		}
 		curr_line = i;
 	}
+	return 0;
 }
 
 int64_t find_line_by_char(int64_t char_index) {
@@ -56,6 +57,7 @@ int64_t find_line_by_char(int64_t char_index) {
 		}
 		curr_line = i;
 	}
+	return 0;
 }
 
 // Arguments:
@@ -117,15 +119,10 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-	catch (Parser::unexpected_token e) {
+	catch (const Parser::unexpected_token& e) {
 		char buf[512];
 		sprintf(buf, "Unexpected token: '%s'", tokens[e.index].to_string());
 		print_compile_error_exit(buf, find_line_by_token(e.index));
-	}
-	catch (Parser::unexpected_c e) {
-		char buf[512];
-		sprintf(buf, "Unexpected character: '%s'", source[e.index]);
-		print_compile_error_exit(buf, find_line_by_char(e.index));
 	}
 
 	return 0;

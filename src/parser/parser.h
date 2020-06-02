@@ -208,42 +208,42 @@ namespace Bonfire {
 			try {
 				expression = parse_return(tokens, cursor, return_type);
 			}
-			catch (parse_exception) {
+			catch (const parse_exception) {
 				cursor = start_cursor;
 				try {
 					expression = parse_code_block(tokens, cursor, return_type);
 				}
-				catch (parse_exception) {
+				catch (const parse_exception) {
 					cursor = start_cursor;
 					try {
 						expression = parse_if(tokens, cursor, return_type);
 					}
-					catch (parse_exception) {
+					catch (const parse_exception) {
 						cursor = start_cursor;
 						try {
 							expression = parse_loop(tokens, cursor, return_type);
 						}
-						catch (parse_exception) {
+						catch (const parse_exception) {
 							cursor = start_cursor;
 							try {
 								expression = parse_variable_declaration(tokens, cursor);
 							}
-							catch (parse_exception) {
+							catch (const parse_exception) {
 								cursor = start_cursor;
 								try {
 									expression = parse_variable_assignment(tokens, cursor, return_type);
 								}
-								catch (parse_exception) {
+								catch (const parse_exception) {
 									cursor = start_cursor;
 									try {
 										expression = parse_variable_value(tokens, cursor, return_type);
 									}
-									catch (parse_exception) {
+									catch (const parse_exception) {
 										cursor = start_cursor;
 										try {
 											expression = parse_constant(tokens, cursor, return_type);
 										}
-										catch (parse_exception) {
+										catch (const parse_exception) {
 											if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
 												++cursor;
 												throw block_done_exception();
@@ -290,7 +290,7 @@ namespace Bonfire {
 					try {
 						block_children.push_back(parse_expression(tokens, cursor, Type::VOID));
 					}
-					catch (block_done_exception) {
+					catch (const block_done_exception) {
 						// This exception tells us that we found a '}' during parsing, which means that
 						// this code block is fully parsed
 						break;

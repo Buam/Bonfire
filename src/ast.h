@@ -34,6 +34,7 @@ namespace Bonfire {
 		case Type::INT64:
 		case Type::UINT64:
 		case Type::DOUBLE:	return 8;
+		default: return 0;
 		}
 	}
 
@@ -57,6 +58,7 @@ namespace Bonfire {
 		if (!can_be_unsigned && (lhs == Type::UINT16 || rhs == Type::UINT16 || lhs == Type::INT16 || rhs == Type::INT16)) return Type::INT32;
 		if (can_be_unsigned && (lhs == Type::UINT8 || rhs == Type::UINT8)) return Type::UINT8;
 		if (!can_be_unsigned && (lhs == Type::UINT8 || rhs == Type::UINT8 || lhs == Type::INT8 || rhs == Type::INT8)) return Type::INT8;
+		return Type::VOID;
 	}
 
 	// Represents a variable definition, including its runtime position on the stack

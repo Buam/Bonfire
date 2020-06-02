@@ -338,11 +338,11 @@ namespace Bonfire {
 			case AstType::CONSTANT:
 			{
 				ConstantST* constant = static_cast<ConstantST*>(var_st->value);
-				uint32_t stack_offset = get_stack_offset_by_var_name(var_st->identifier);
+				uint32_t var_stack_offset = get_stack_offset_by_var_name(var_st->identifier);
 				std::string asm_size = get_asm_size(get_size_by_var_name(var_st->identifier));
 
 				//stream << string_format(ASM_FORMAT_VAR_AS_CONST, asm_size.c_str(), stack_offset, num);
-				instructions.push_back(new Asm3<std::string, uint32_t, std::string>(AsmType::MOVE_MEM_CONST, asm_size, stack_offset, constant->constant));
+				instructions.push_back(new Asm3<std::string, uint32_t, std::string>(AsmType::MOVE_MEM_CONST, asm_size, var_stack_offset, constant->constant));
 				return;
 			}
 			case AstType::VAR_VALUE:

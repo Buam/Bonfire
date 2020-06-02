@@ -12,10 +12,13 @@ Current example (An example that shows the most recent features):
 ```rust
 // Main function (returns 32-bit integer)
 main() -> i32 {
-  // Declare a variable named 'x' and initialise it with the constant 10
-  x: i32 = 10
-  // Return the value of x
-  <- x
+  // Declare a variable named 'x' and initialise it with whatever the code block returns
+  x: i32 = -> i32 {
+    <- 2
+  }
+  // Value of x is now 2
+  y: i32 = x
+  <- y
 }
 ```
 

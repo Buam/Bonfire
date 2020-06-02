@@ -5,7 +5,7 @@
 #define ASM_SIZE_32 "DWORD"
 #define ASM_SIZE_64 "QWORD"
 
-#define ASM_PROGRAM "\t.intel_syntax noprefix\n\t.global _main\n\t.text\n"
+#define ASM_PROGRAM "\t.intel_syntax noprefix\n\t.global main\n\t.text\n"
 
 #define ASM_SETUP_STACK_FRAME "\tpush ebp\n\tmov ebp, esp\n"
 #define ASM_CLOSE_STACK_FRAME "\tpop ebp\n"
@@ -19,7 +19,7 @@
 #define ASM_MOVE_REG_CONST "\tmov %s, %s\n"
 
 #define ASM_MOVE_MEM_MEM "\tmov %s, %s PTR [ebp-%u]\n\tmov %s PTR [ebp-%u], %s\n"
-#define ASM_MOVE_MEM_REG "\tmov %s, PTR [ebp-%u], %s\n"
+#define ASM_MOVE_MEM_REG "\tmov %s PTR [ebp-%u], %s\n"
 #define ASM_MOVE_MEM_CONST "\tmov %s PTR [ebp-%u], %s\n"
 
 #define CMP_CONST_CONST "\tcmp %s, %s\n"

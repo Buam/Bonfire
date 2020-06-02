@@ -4,7 +4,6 @@
 namespace Bonfire {
 	enum class Type {
 		VOID,
-		BOOLEAN,
 		INT8,
 		INT16,
 		INT32,
@@ -22,7 +21,6 @@ namespace Bonfire {
 		switch (type) {
 		case Type::VOID:	return 0;
 			// One byte types (byte, char)
-		case Type::BOOLEAN:
 		case Type::INT8:
 		case Type::UINT8:	return 1;
 			// Two byte types (short)
@@ -40,7 +38,7 @@ namespace Bonfire {
 	}
 
 	bool is_integer_type(Type type) {
-		return type == Type::BOOLEAN || type == Type::UINT8 || type == Type::UINT16 || type == Type::UINT32
+		return type == Type::UINT8 || type == Type::UINT16 || type == Type::UINT32
 			|| type == Type::UINT64 || type == Type::INT8 || type == Type::INT16 || type == Type::INT32 || type == Type::INT64;
 	}
 
@@ -262,7 +260,7 @@ namespace Bonfire {
 			case Operation::LTE:
 			case Operation::GT:
 			case Operation::GTE:
-				return_type = Type::BOOLEAN;
+				return_type = Type::INT8;
 				break;
 			case Operation::ADD:
 			case Operation::SUB:

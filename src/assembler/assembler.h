@@ -4,6 +4,7 @@
 
 #include "assembler/format.h"
 #include "assembler/instructions.h"
+#include "assembler/optimizations.h"
 #include "assembler/final.h"
 #include "ast.h"
 
@@ -35,7 +36,7 @@ namespace Bonfire {
 					return v.stack_offset;
 				}
 			}
-			return NULL;
+			return 0;
 		}
 
 		Type get_type_by_var_name(std::string name) {
@@ -71,7 +72,7 @@ namespace Bonfire {
 			return "ERR";
 		}
 
-		void assemble_expression(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset, bool code_block, const char* code_block_label);
+		void assemble_expression(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset, bool can_return, const char* code_block_label);
 		void assemble_expression(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
 			assemble_expression(instructions, expression, stack_offset, false, NULL);
 		}
@@ -127,7 +128,7 @@ namespace Bonfire {
 			}
 		}
 
-		void assemble_loop(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
+		void assemble_loop(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset, bool can_return, const char* code_block_label) {
 			LoopST* loop_st = static_cast<LoopST*>(expression);
 
 			//bool is_op = loop_st->condition->type == AstType::OPERATION;
@@ -154,7 +155,7 @@ namespace Bonfire {
 				instructions.push_back(new Asm1<std::string>(AsmType::JUMP_EQ, continue_label_name));
 
 				// Loop body
-				assemble_expression(instructions, loop_st->body, stack_offset);
+				assemble_expression(instructions, loop_st->body, stack_offset, can_return, code_block_label);
 				// jump to beginning (loop)
 				//stream << string_format(ASM_FORMAT_JMP, beginning_label_name.c_str());
 				instructions.push_back(new Asm1<std::string>(AsmType::JUMP, beginning_label_name));
@@ -164,7 +165,7 @@ namespace Bonfire {
 			}
 		}
 
-		void assemble_if(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
+		void assemble_if(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset, bool can_return, const char* code_block_label) {
 			IfST* if_st = static_cast<IfST*>(expression);
 			bool is_op = if_st->condition->type == AstType::OPERATION;
 			if (is_op || if_st->condition->type == AstType::VAR_VALUE) {
@@ -213,7 +214,7 @@ namespace Bonfire {
 					instructions.push_back(new Asm1<std::string>(AsmType::JUMP_EQ, if_st->has_else ? else_label_name : continue_label_name));
 				}
 
-				assemble_expression(instructions, if_st->then_body, stack_offset);
+				assemble_expression(instructions, if_st->then_body, stack_offset, can_return, code_block_label);
 				if (if_st->has_else) {
 					// Jump to continue to skip else
 					//stream << string_format(ASM_FORMAT_JMP, continue_label_name.c_str());
@@ -221,7 +222,7 @@ namespace Bonfire {
 					// Put else label here
 					//stream << string_format(ASM_FORMAT_LABEL, else_label_name.c_str());
 					instructions.push_back(new Asm1<std::string>(AsmType::LABEL, else_label_name));
-					assemble_expression(instructions, if_st->else_body, stack_offset);
+					assemble_expression(instructions, if_st->else_body, stack_offset, can_return, code_block_label);
 				}
 				// Put continue label here
 				//stream << string_format(ASM_FORMAT_LABEL, continue_label_name.c_str());
@@ -275,8 +276,11 @@ namespace Bonfire {
 			}
 
 			// Determine if this block can return the function
-			// If the parent can return and the current block type is void, we want to return from the function
+			// If the parent can return and the current block type is void, when using return on this block, we want to return from the function instead of the block
 			bool can_return = can_parent_return && block_st->return_type == Type::VOID;
+
+			std::cout << "Can parent return? " << std::boolalpha << can_parent_return << std::endl;
+			std::cout << "Return type " << (int)block_st->return_type << std::endl;
 
 			if (stack_frame) {
 				uint32_t start_stack_offset = stack_offset;
@@ -328,7 +332,7 @@ namespace Bonfire {
 			}
 		}
 
-		void assemble_var_assignment(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset) {
+		void assemble_var_assignment(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset, bool can_return) {
 			VariableAssignST* var_st = static_cast<VariableAssignST*>(ret);
 			switch (var_st->value->type) {
 			case AstType::CONSTANT:
@@ -356,12 +360,15 @@ namespace Bonfire {
 			}
 		}
 
-		void assemble_var_declaration(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset) {
+		void assemble_var_declaration(std::vector<AssemblyInstruction*>& instructions, ExpressionST* ret, uint32_t& stack_offset, bool can_return) {
 			VariableDeclarationST* var_st = static_cast<VariableDeclarationST*>(ret);
 			if (var_st) {
+				std::cout << "Assembling variable declaration: " << var_st->identifier << std::endl;
+				std::cout << "Variable type: ";
 				switch (var_st->value->type) {
 				case AstType::CONSTANT:
 				{
+					std::cout << "Constant" << std::endl;
 					ConstantST* constant = static_cast<ConstantST*>(var_st->value);
 					// Decrease stack pointer by the size of the constant and move the value into it
 					int64_t num = std::stoi(const_as_num(constant->get_value()).c_str());
@@ -376,6 +383,7 @@ namespace Bonfire {
 				}
 				case AstType::VAR_VALUE:
 				{
+					std::cout << "Variable" << std::endl;
 					VariableValST* var_rhs = static_cast<VariableValST*>(var_st->value);
 					// Decrease stack pointer by the size of the rhs variable and move the value of rhs into it
 					uint8_t size = get_type_size(var_rhs->return_type);
@@ -390,14 +398,18 @@ namespace Bonfire {
 					return;
 				}
 				case AstType::BLOCK:
+					std::cout << "Block" << std::endl;
 					// This block can't return void since it is used to assign a value to a variable. Therefore it can't return from the parent function
 					BlockST* block_st = assemble_code_block(instructions, var_st->value, stack_offset, false);
 
+
 					uint8_t size = get_type_size(block_st->return_type);
 					stack_offset += size;
+					std::string asm_size = get_asm_size(size);
 
 					//stream << string_format(ASM_FORMAT_VAR_DEC_RETURN, stack_offset);
 					//instructions.push_back(new Asm2<std::string, uin32_t);
+					instructions.push_back(new Asm3<std::string, uint32_t, std::string>(AsmType::MOVE_MEM_REG, asm_size, stack_offset, "eax"));
 
 					glob_vars.push_back(Variable(var_st->identifier, stack_offset, block_st->return_type));
 					return;
@@ -414,16 +426,16 @@ namespace Bonfire {
 				assemble_return(instructions, expression, stack_offset, can_return, code_block_end_label);
 				return;
 			case AstType::VAR_DECLARATION:
-				assemble_var_declaration(instructions, expression, stack_offset);
+				assemble_var_declaration(instructions, expression, stack_offset, can_return);
 				return;
 			case AstType::VAR_ASSIGNMENT:
-				assemble_var_assignment(instructions, expression, stack_offset);
+				assemble_var_assignment(instructions, expression, stack_offset, can_return);
 				return;
 			case AstType::IF:
-				assemble_if(instructions, expression, stack_offset);
+				assemble_if(instructions, expression, stack_offset, can_return, code_block_end_label);
 				return;
 			case AstType::LOOP:
-				assemble_loop(instructions, expression, stack_offset);
+				assemble_loop(instructions, expression, stack_offset, can_return, code_block_end_label);
 				return;
 			}
 		}
@@ -432,7 +444,7 @@ namespace Bonfire {
 		void assemble_expression_stres(std::vector<AssemblyInstruction*>& instructions, ExpressionST* expression, uint32_t& stack_offset) {
 			switch (expression->type) {
 			case AstType::BLOCK:
-				assemble_code_block(instructions, expression, stack_offset, false);
+				assemble_code_block(instructions, expression, stack_offset, true);
 				return;
 			case AstType::CONSTANT:
 			{
@@ -453,7 +465,7 @@ namespace Bonfire {
 
 		void assemble_function(std::vector<AssemblyInstruction*>& instructions, FunctionDefST* function, uint32_t& stack_offset) {
 			//stream << string_format(ASM_FORMAT_LABEL, !function->name.compare("main") ? "_main" : function->name.c_str());
-			instructions.push_back(new Asm1<std::string>(AsmType::LABEL, !function->name.compare("main") ? "_main" : function->name));
+			instructions.push_back(new Asm1<std::string>(AsmType::LABEL, function->name));
 			// Setup stack frame for this function
 			//stream << ASM_SETUP_STACK_FRAME;
 			instructions.push_back(new AssemblyInstruction(AsmType::SETUP_SF));
@@ -479,6 +491,8 @@ namespace Bonfire {
 			for(AssemblyInstruction* i : instructions) {
 				std::cout << "\t" << asmtype_to_string(i->type) << std::endl;
 			}
+
+			optimize(instructions);
 
 			return final_assemble(instructions);
 		}

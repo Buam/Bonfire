@@ -18,7 +18,6 @@ namespace Bonfire {
 			if (!source.compare("u16"))		return Type::UINT16;
 			if (!source.compare("u32"))		return Type::UINT32;
 			if (!source.compare("u64"))		return Type::UINT64;
-			if (!source.compare("bool"))	return Type::BOOLEAN;
 			// TODO: Exceptions
 			return Type::VOID;
 		}
@@ -92,10 +91,11 @@ namespace Bonfire {
 			if (tokens[cursor].type == TokenType::RETURN) {
 				++cursor;
 				ExpressionST* expression = parse_expression(tokens, cursor, return_type);
-				if (expression->return_type == Type::VOID || expression->return_type != return_type) {
+				// Commented because returns inside VOID blocks would fail
+				/*if (expression->type == Type::VOID) {
 					// TODO: Exception, for now: just fail
 					throw parse_exception();
-				}
+				}*/
 
 				ReturnST* return_st = new ReturnST(expression);
 				return return_st;
@@ -134,7 +134,7 @@ namespace Bonfire {
 				++cursor;
 				if (tokens[cursor].type == TokenType::PAR_OPEN) {
 					++cursor;
-					ExpressionST* condition = parse_expression(tokens, cursor, Type::BOOLEAN);
+					ExpressionST* condition = parse_expression(tokens, cursor, Type::INT8);
 					if (tokens[cursor].type == TokenType::PAR_CLOSE) {
 						++cursor;
 						ExpressionST* body = parse_expression(tokens, cursor, Type::VOID);
@@ -152,7 +152,7 @@ namespace Bonfire {
 				++cursor;
 				if (tokens[cursor].type == TokenType::PAR_OPEN) {
 					++cursor;
-					ExpressionST* condition = parse_expression(tokens, cursor, Type::BOOLEAN);
+					ExpressionST* condition = parse_expression(tokens, cursor, Type::INT8);
 					if (tokens[cursor].type == TokenType::PAR_CLOSE) {
 						++cursor;
 						ExpressionST* then_body = parse_expression(tokens, cursor, expected_type);
@@ -211,17 +211,17 @@ namespace Bonfire {
 			catch (parse_exception) {
 				cursor = start_cursor;
 				try {
-					expression = parse_code_block(tokens, cursor, Type::VOID);
+					expression = parse_code_block(tokens, cursor, return_type);
 				}
 				catch (parse_exception) {
 					cursor = start_cursor;
 					try {
-						expression = parse_if(tokens, cursor, Type::VOID);
+						expression = parse_if(tokens, cursor, return_type);
 					}
 					catch (parse_exception) {
 						cursor = start_cursor;
 						try {
-							expression = parse_loop(tokens, cursor, Type::VOID);
+							expression = parse_loop(tokens, cursor, return_type);
 						}
 						catch (parse_exception) {
 							cursor = start_cursor;
@@ -231,17 +231,17 @@ namespace Bonfire {
 							catch (parse_exception) {
 								cursor = start_cursor;
 								try {
-									expression = parse_variable_assignment(tokens, cursor, Type::VOID);
+									expression = parse_variable_assignment(tokens, cursor, return_type);
 								}
 								catch (parse_exception) {
 									cursor = start_cursor;
 									try {
-										expression = parse_variable_value(tokens, cursor, Type::VOID);
+										expression = parse_variable_value(tokens, cursor, return_type);
 									}
 									catch (parse_exception) {
 										cursor = start_cursor;
 										try {
-											expression = parse_constant(tokens, cursor, Type::VOID);
+											expression = parse_constant(tokens, cursor, return_type);
 										}
 										catch (parse_exception) {
 											if (tokens[cursor].type == TokenType::BRACE_CLOSE) {
@@ -288,7 +288,7 @@ namespace Bonfire {
 
 				while (1) {
 					try {
-						block_children.push_back(parse_expression(tokens, cursor, return_type));
+						block_children.push_back(parse_expression(tokens, cursor, Type::VOID));
 					}
 					catch (block_done_exception) {
 						// This exception tells us that we found a '}' during parsing, which means that
@@ -304,7 +304,7 @@ namespace Bonfire {
 					block_children_arr[i] = block_children[i];
 				}
 
-				return new BlockST(return_type, block_children_arr, block_children.size());
+				return new BlockST(block_type, block_children_arr, block_children.size());
 			}
 			throw parse_exception();
 		}

@@ -104,7 +104,7 @@ namespace Bonfire {
 		E data2;
 		F data3;
 		G data4;
-		Asm4(AsmType type, T data, E data2, F data3, G data4) {
+		Asm4(AsmType type, T data1, E data2, F data3, G data4) {
 			this->type = type;
 			this->data1 = data1;
 			this->data2 = data2;

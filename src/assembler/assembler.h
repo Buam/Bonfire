@@ -389,10 +389,16 @@ namespace Bonfire {
 					uint8_t size = get_type_size(var_rhs->return_type);
 					uint32_t rhs_stack_offset = get_stack_offset_by_var_name(var_rhs->identifier);
 					std::string asm_size = get_asm_size(var_rhs->return_type);
+					std::string rhs_asm_size = asm_size;
 					stack_offset += size;
 
+					std::cout << "Assembling Variable declaration by variable value" << std::endl;
+					std::cout << var_st->identifier << " stack offset: " << stack_offset << std::endl;
+					std::cout << var_rhs->identifier << " stack offset: " << rhs_stack_offset << std::endl;
+
+					// RHS FIRST
 					//stream << string_format(ASM_FORMAT_VAR_DEC_INIT_VAR, asm_size.c_str(), rhs_stack_offset, stack_offset);
-					instructions.push_back(new Asm4<std::string, uint32_t, std::string, uint32_t>(AsmType::MOVE_MEM_MEM, asm_size, stack_offset, asm_size, rhs_stack_offset));
+					instructions.push_back(new Asm4<std::string, uint32_t, std::string, uint32_t>(AsmType::MOVE_MEM_MEM, rhs_asm_size, rhs_stack_offset, asm_size, stack_offset));
 
 					glob_vars.push_back(Variable(var_st->identifier, stack_offset, var_rhs->return_type));
 					return;

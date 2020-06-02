@@ -56,7 +56,7 @@ namespace Bonfire {
 			case AsmType::MOVE_MEM_MEM:
 			{
 				auto as = static_cast<Asm4<std::string, uint32_t, std::string, uint32_t>*>(instructions[i]);
-				stream << string_format(ASM_MOVE_MEM_MEM, "ebx", as->data1.c_str(), as->data2, "ebx", as->data3.c_str(), as->data4);
+				stream << string_format(ASM_MOVE_MEM_MEM, "ebx", as->data1.c_str(), as->data2, as->data3.c_str(), as->data4, "ebx");
 				break;
 			}
 			case AsmType::MOVE_MEM_REG:
